@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { analyzeWithAI, analysisPrompts } = require('../services/openrouter');
+const { aiRateLimiter } = require('../middleware/rateLimiter');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
@@ -50,14 +51,14 @@ router.delete('/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Internal server error' }); }
 });
 
-router.post('/:id/analyze', async (req, res) => {
+router.post('/:id/analyze', aiRateLimiter, async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM engagement_scores WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     const item = result.rows[0];
     const { prompt, context } = analysisPrompts.engagementScores(item);
     const analysis = await analyzeWithAI(prompt, context);
-    await db.query('UPDATE engagement_scores SET ai_recommendations = $1 WHERE id = $2', [JSON.stringify(analysis), req.params.id]);
+    await db.query('UPDATE engagement_scores SET ai_recommendations = $1 WHERE id = $2', [analysis, req.params.id]);
     res.json({ ...item, ai_recommendations: analysis });
   } catch (err) { res.status(500).json({ error: 'Internal server error' }); }
 });

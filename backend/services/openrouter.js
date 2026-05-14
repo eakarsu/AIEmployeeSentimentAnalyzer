@@ -1,8 +1,58 @@
 const fetch = require('node-fetch');
 
+// parseAIJson - 3-strategy AI JSON response parser
+// Strategy 1: direct JSON.parse
+// Strategy 2: strip markdown code fences then parse
+// Strategy 3: brace/bracket matching extraction
+function parseAIJson(content) {
+  if (content == null) throw new Error('parseAIJson: empty content');
+  const raw = String(content).trim();
+
+  // Strategy 1: direct
+  try { return JSON.parse(raw); } catch (_) {}
+
+  // Strategy 2: strip code fences
+  let cleaned = raw;
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```[\s\S]*$/, '');
+    try { return JSON.parse(cleaned.trim()); } catch (_) {}
+  } else {
+    const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenceMatch) {
+      try { return JSON.parse(fenceMatch[1].trim()); } catch (_) {}
+    }
+  }
+
+  // Strategy 3: brace-matching
+  const objStart = cleaned.indexOf('{');
+  const arrStart = cleaned.indexOf('[');
+  let start = -1, openCh, closeCh;
+  if (objStart !== -1 && (arrStart === -1 || objStart < arrStart)) {
+    start = objStart; openCh = '{'; closeCh = '}';
+  } else if (arrStart !== -1) {
+    start = arrStart; openCh = '['; closeCh = ']';
+  }
+  if (start === -1) throw new Error('parseAIJson: no JSON object/array found');
+
+  let depth = 0, inString = false, escape = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === openCh) depth++;
+    else if (ch === closeCh) {
+      depth--;
+      if (depth === 0) return JSON.parse(cleaned.substring(start, i + 1));
+    }
+  }
+  throw new Error('parseAIJson: unbalanced braces');
+}
+
 async function analyzeWithAI(prompt, context) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5';
+  const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022';
 
   if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
     return {
@@ -50,11 +100,15 @@ async function analyzeWithAI(prompt, context) {
       return { analysis: 'AI returned empty response', error: true };
     }
 
-    // Try to parse as JSON, otherwise return as plain text
+    // Try 3-strategy JSON parse, otherwise return as plain text
     try {
-      return JSON.parse(content);
+      const parsed = parseAIJson(content);
+      // Attach metadata for caching/audit
+      parsed._ai_model = model;
+      parsed._ai_usage = data.usage || null;
+      return parsed;
     } catch {
-      return { analysis: content };
+      return { analysis: content, _ai_model: model, _ai_usage: data.usage || null };
     }
   } catch (err) {
     console.error('OpenRouter request error:', err.message);
@@ -140,4 +194,4 @@ const analysisPrompts = {
   }),
 };
 
-module.exports = { analyzeWithAI, analysisPrompts };
+module.exports = { analyzeWithAI, analysisPrompts, parseAIJson };

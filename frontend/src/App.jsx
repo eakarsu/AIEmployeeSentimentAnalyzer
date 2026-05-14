@@ -1,8 +1,17 @@
+import Batch03Features from './pages/Batch03Features';
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import FeaturePage from './pages/FeaturePage'
+import SentimentAnalysisPage from './pages/SentimentAnalysisPage'
+import RetentionPredictPage from './pages/RetentionPredictPage'
+import ENPSImprovePage from './pages/ENPSImprovePage'
+import LeadershipFeedbackExtractPage from './pages/LeadershipFeedbackExtractPage'
+import CultureHealthScorePage from './pages/CultureHealthScorePage'
+import CrossModuleCorrelationPage from './pages/CrossModuleCorrelationPage'
+import SentimentTrendPage from './pages/SentimentTrendPage'
+import InterventionPlannerPage from './pages/InterventionPlannerPage'
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -30,8 +39,17 @@ function App() {
     <div className="app-container">
       <Navbar user={user} onLogout={handleLogout} />
       <Routes>
+          <Route path="/batch03" element={<Batch03Features />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/feature/:featureKey" element={<FeaturePage />} />
+        <Route path="/ai/sentiment-analysis" element={<SentimentAnalysisPage />} />
+        <Route path="/ai/retention-predict" element={<RetentionPredictPage />} />
+        <Route path="/ai/enps-improve" element={<ENPSImprovePage />} />
+        <Route path="/ai/leadership-feedback-extract" element={<LeadershipFeedbackExtractPage />} />
+        <Route path="/ai/culture-health-score" element={<CultureHealthScorePage />} />
+        <Route path="/ai/cross-module-correlation" element={<CrossModuleCorrelationPage />} />
+        <Route path="/ai/sentiment-trend" element={<SentimentTrendPage />} />
+        <Route path="/ai/intervention-planner" element={<InterventionPlannerPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
