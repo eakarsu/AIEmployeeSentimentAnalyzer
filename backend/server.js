@@ -128,6 +128,9 @@ try {
   else app.use('/api', _batch03);
 } catch (_e) { /* batch03 gap routes optional */ }
 
+// Custom Views (mounted BEFORE 404/listen)
+app.use('/api/custom-views', require('./routes/customViews'));
+
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
 });

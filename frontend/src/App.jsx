@@ -12,6 +12,7 @@ import CultureHealthScorePage from './pages/CultureHealthScorePage'
 import CrossModuleCorrelationPage from './pages/CrossModuleCorrelationPage'
 import SentimentTrendPage from './pages/SentimentTrendPage'
 import InterventionPlannerPage from './pages/InterventionPlannerPage'
+import CustomViewsPage from './pages/CustomViewsPage'
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -50,6 +51,7 @@ function App() {
         <Route path="/ai/cross-module-correlation" element={<CrossModuleCorrelationPage />} />
         <Route path="/ai/sentiment-trend" element={<SentimentTrendPage />} />
         <Route path="/ai/intervention-planner" element={<InterventionPlannerPage />} />
+        <Route path="/custom-views" element={<CustomViewsPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>
@@ -65,6 +67,13 @@ function Navbar({ user, onLogout }) {
         <span>SentimentAI</span>
       </div>
       <div className="navbar-user">
+        <a
+          data-testid="sidebar-sentiment-views"
+          onClick={() => navigate('/custom-views')}
+          style={{ cursor: 'pointer', color: '#a78bfa', fontWeight: 600, marginRight: 16 }}
+        >
+          Sentiment Views
+        </a>
         <span>{user.name} ({user.role})</span>
         <button className="btn-logout" onClick={onLogout}>Logout</button>
       </div>
