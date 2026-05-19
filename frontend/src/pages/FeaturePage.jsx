@@ -23,8 +23,10 @@ export default function FeaturePage() {
   const loadItems = async () => {
     setLoading(true);
     try {
-      const res = await api.get(feature.apiPath);
-      setItems(res.data);
+      const res = await api.get(feature.apiPath, { params: { page: 1, limit: 100 } });
+      // Handle paginated {data, pagination} or plain array
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setItems(list);
     } catch (err) {
       console.error('Error loading items:', err);
     } finally {

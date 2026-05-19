@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { analyzeWithAI, analysisPrompts } = require('../services/openrouter');
+const { aiRateLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -8,7 +9,10 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const { department, sentiment_label } = req.query;
-    let query = 'SELECT * FROM employee_surveys';
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
     const params = [];
     const conditions = [];
 
@@ -21,13 +25,21 @@ router.get('/', async (req, res) => {
       conditions.push(`sentiment_label = $${params.length}`);
     }
 
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-    query += ' ORDER BY created_at DESC';
+    const whereClause = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
 
-    const result = await db.query(query, params);
-    res.json(result.rows);
+    const countResult = await db.query(`SELECT COUNT(*) FROM employee_surveys${whereClause}`, params);
+    const total = parseInt(countResult.rows[0].count);
+
+    const dataParams = [...params, limit, offset];
+    const dataResult = await db.query(
+      `SELECT * FROM employee_surveys${whereClause} ORDER BY created_at DESC LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`,
+      dataParams
+    );
+
+    res.json({
+      data: dataResult.rows,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (err) {
     console.error('Error fetching surveys:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -98,7 +110,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /api/surveys/:id/analyze
-router.post('/:id/analyze', async (req, res) => {
+router.post('/:id/analyze', aiRateLimiter, async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM employee_surveys WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) {
@@ -109,7 +121,14 @@ router.post('/:id/analyze', async (req, res) => {
     const { prompt, context } = analysisPrompts.surveys(survey);
     const analysis = await analyzeWithAI(prompt, context);
 
-    await db.query('UPDATE employee_surveys SET ai_analysis = $1 WHERE id = $2', [JSON.stringify(analysis), req.params.id]);
+    await db.query('UPDATE employee_surveys SET ai_analysis = $1 WHERE id = $2', [analysis, req.params.id]);
+
+    // Persist to unified ai_results cache (non-blocking)
+    db.query(
+      `INSERT INTO ai_results (user_id, feature, entity_type, entity_id, prompt_summary, result, model)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [req.user?.id || null, 'surveys', 'employee_surveys', req.params.id, 'Survey sentiment analysis', analysis, analysis?._ai_model || 'anthropic/claude-3-5-sonnet-20241022']
+    ).catch(err => console.error('[ai_results persist]', err.message));
 
     res.json({ ...survey, ai_analysis: analysis });
   } catch (err) {
