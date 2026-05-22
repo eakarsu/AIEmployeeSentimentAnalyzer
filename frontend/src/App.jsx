@@ -1,4 +1,9 @@
 import Batch03Features from './pages/Batch03Features';
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
+import TimelineView from './pages/TimelineView';
+
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Login from './pages/Login'
@@ -13,6 +18,7 @@ import CrossModuleCorrelationPage from './pages/CrossModuleCorrelationPage'
 import SentimentTrendPage from './pages/SentimentTrendPage'
 import InterventionPlannerPage from './pages/InterventionPlannerPage'
 import CustomViewsPage from './pages/CustomViewsPage'
+import RetaliationRiskSentinel from './pages/RetaliationRiskSentinel'
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -40,6 +46,10 @@ function App() {
     <div className="app-container">
       <Navbar user={user} onLogout={handleLogout} />
       <Routes>
+        <Route path="/insights/timeline" element={<TimelineView />} />
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
           <Route path="/batch03" element={<Batch03Features />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/feature/:featureKey" element={<FeaturePage />} />
@@ -52,6 +62,7 @@ function App() {
         <Route path="/ai/sentiment-trend" element={<SentimentTrendPage />} />
         <Route path="/ai/intervention-planner" element={<InterventionPlannerPage />} />
         <Route path="/custom-views" element={<CustomViewsPage />} />
+        <Route path="/retaliation-risk-sentinel" element={<RetaliationRiskSentinel />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </div>

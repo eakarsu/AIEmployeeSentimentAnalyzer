@@ -85,6 +85,7 @@ app.use('/api/di-metrics', require('./routes/diMetrics'));
 app.use('/api/predictive-turnover', require('./routes/predictiveTurnover'));
 app.use('/api/exit-interview-auto', require('./routes/exitInterviewAuto'));
 app.use('/api/skip-level', require('./routes/skipLevelReport'));
+app.use('/api/retaliation-risk-sentinel', require('./routes/retaliationRiskSentinel'));
 
 // AI results history (paginated)
 app.get('/api/ai-results', async (req, res) => {
