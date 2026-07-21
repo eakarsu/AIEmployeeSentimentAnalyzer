@@ -1,8 +1,7 @@
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) throw new Error('DATABASE_URL is required in production');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);

@@ -5,6 +5,10 @@ const db = require('../db');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
+const getJwtSecret = () => {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET.startsWith('replace-')) throw new Error('JWT_SECRET must contain at least 32 non-placeholder characters');
+  return process.env.JWT_SECRET;
+};
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -28,8 +32,8 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role },
-      process.env.JWT_SECRET,
+      { id: user.id, email: user.email, name: user.name, role: user.role, tenant_id: user.tenant_id },
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -40,6 +44,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        tenant_id: user.tenant_id,
       },
     });
   } catch (err) {
@@ -52,7 +57,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', auth, async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, email, name, role, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, role, tenant_id, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
     const user = result.rows[0];

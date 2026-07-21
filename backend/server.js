@@ -2,7 +2,6 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { runMigration } = require('./db/migrate_jsonb');
 const db = require('./db');
 
 const app = express();
@@ -30,52 +29,36 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
-// Run JSONB migration on startup
-runMigration().catch(err => console.error('Migration warning:', err.message));
-
-// Ensure unified ai_results JSONB cache table exists
-async function ensureAiResultsTable() {
-  try {
-    await db.query(`CREATE TABLE IF NOT EXISTS ai_results (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER,
-      feature VARCHAR(100) NOT NULL,
-      entity_type VARCHAR(100),
-      entity_id INTEGER,
-      prompt_summary TEXT,
-      result JSONB NOT NULL,
-      model VARCHAR(100),
-      tokens_used INTEGER,
-      duration_ms INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_ai_results_user_feature ON ai_results(user_id, feature)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_ai_results_entity ON ai_results(entity_type, entity_id)`);
-    await db.query(`CREATE INDEX IF NOT EXISTS idx_ai_results_result_gin ON ai_results USING GIN (result)`);
-    console.log('ai_results table ready');
-  } catch (err) {
-    console.error('ai_results table error:', err.message);
-  }
-}
-ensureAiResultsTable();
+app.use('/api', (req, res, next) => {
+  const governed = ['/auth', '/health', '/listening'].some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`));
+  const legacyEnabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_LEGACY_UNSCOPED_ROUTES === 'true';
+  if (governed || legacyEnabled) return next();
+  return res.status(404).json({ error: 'Legacy individually identifying route is quarantined' });
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/surveys', require('./routes/surveys'));
-app.use('/api/department-analytics', require('./routes/departmentAnalytics'));
-app.use('/api/pulse-checks', require('./routes/pulseChecks'));
-app.use('/api/feedback-analysis', require('./routes/feedbackAnalysis'));
-app.use('/api/retention-risks', require('./routes/retentionRisks'));
-app.use('/api/engagement-scores', require('./routes/engagementScores'));
-app.use('/api/team-morale', require('./routes/teamMorale'));
-app.use('/api/exit-interviews', require('./routes/exitInterviews'));
-app.use('/api/anonymous-reports', require('./routes/anonymousReports'));
-app.use('/api/performance-reviews', require('./routes/performanceReviews'));
-app.use('/api/onboarding-feedback', require('./routes/onboardingFeedback'));
-app.use('/api/benefits-satisfaction', require('./routes/benefitsSatisfaction'));
-app.use('/api/work-life-balance', require('./routes/workLifeBalance'));
-app.use('/api/leadership-ratings', require('./routes/leadershipRatings'));
-app.use('/api/culture-index', require('./routes/cultureIndex'));
+app.use('/api/listening', require('./routes/listeningWorkflow'));
+
+// Legacy routes expose individually identifiable text and are development-only.
+// They are quarantined until their schemas and queries are tenant-scoped.
+if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_LEGACY_UNSCOPED_ROUTES === 'true') {
+  app.use('/api/surveys', require('./routes/surveys'));
+  app.use('/api/department-analytics', require('./routes/departmentAnalytics'));
+  app.use('/api/pulse-checks', require('./routes/pulseChecks'));
+  app.use('/api/feedback-analysis', require('./routes/feedbackAnalysis'));
+  app.use('/api/retention-risks', require('./routes/retentionRisks'));
+  app.use('/api/engagement-scores', require('./routes/engagementScores'));
+  app.use('/api/team-morale', require('./routes/teamMorale'));
+  app.use('/api/exit-interviews', require('./routes/exitInterviews'));
+  app.use('/api/anonymous-reports', require('./routes/anonymousReports'));
+  app.use('/api/performance-reviews', require('./routes/performanceReviews'));
+  app.use('/api/onboarding-feedback', require('./routes/onboardingFeedback'));
+  app.use('/api/benefits-satisfaction', require('./routes/benefitsSatisfaction'));
+  app.use('/api/work-life-balance', require('./routes/workLifeBalance'));
+  app.use('/api/leadership-ratings', require('./routes/leadershipRatings'));
+  app.use('/api/culture-index', require('./routes/cultureIndex'));
+}
 
 app.use('/api/ai', require('./routes/aiNew'));
 app.use('/api/realtime-pulse', require('./routes/realtimePulse'));
@@ -121,13 +104,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-
-// === Batch 03 Gaps & Frontend Mounts ===
-try {
-  const _batch03 = require('./routes/batch03Gaps');
-  if (typeof authenticateToken === 'function') app.use('/api', authenticateToken, _batch03);
-  else app.use('/api', _batch03);
-} catch (_e) { /* batch03 gap routes optional */ }
 
 // Custom Views (mounted BEFORE 404/listen)
 app.use('/api/custom-views', require('./routes/customViews'));

@@ -1,0 +1,2 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+test('listening migration includes privacy thresholds, expiry, cohort analyses, reviewed actions, and audit',()=>{const sql=fs.readFileSync(path.join(__dirname,'../migrations/001_listening_privacy.sql'),'utf8');for(const term of ['minimum_cohort_size>=5','encrypted_response','expires_at','cohort_analyses','listening_actions','listening_audit_events'])assert.ok(sql.includes(term),term);});
