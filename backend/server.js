@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const db = require('./db');
+const auth = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 3001;
@@ -30,7 +31,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api', (req, res, next) => {
-  const governed = ['/auth', '/health', '/listening'].some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`));
+  const governed = ['/auth', '/health', '/listening', '/ai'].some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`));
   const legacyEnabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_LEGACY_UNSCOPED_ROUTES === 'true';
   if (governed || legacyEnabled) return next();
   return res.status(404).json({ error: 'Legacy individually identifying route is quarantined' });
@@ -60,7 +61,7 @@ if (process.env.NODE_ENV !== 'production' && process.env.ENABLE_LEGACY_UNSCOPED_
   app.use('/api/culture-index', require('./routes/cultureIndex'));
 }
 
-app.use('/api/ai', require('./routes/aiNew'));
+app.use('/api/ai', auth, require('./routes/aiNew'));
 app.use('/api/realtime-pulse', require('./routes/realtimePulse'));
 app.use('/api/agentic-hr', require('./routes/agenticHrPartner'));
 app.use('/api/voice-hotline', require('./routes/voiceHotline'));

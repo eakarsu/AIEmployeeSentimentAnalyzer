@@ -55,14 +55,12 @@ async function analyzeWithAI(prompt, context) {
   const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022';
 
   if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
-    return {
-      analysis: 'AI analysis unavailable. Please configure OPENROUTER_API_KEY in your .env file.',
-      error: true,
-    };
+    throw new Error('OpenRouter API key not configured');
   }
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const baseUrl = (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -88,16 +86,14 @@ async function analyzeWithAI(prompt, context) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenRouter API error:', response.status, errorText);
-      return { analysis: `AI analysis failed: ${response.status}`, error: true };
+      throw new Error(`OpenRouter request failed with ${response.status}`);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
-      return { analysis: 'AI returned empty response', error: true };
+      throw new Error('OpenRouter returned empty content');
     }
 
     // Try 3-strategy JSON parse, otherwise return as plain text
@@ -112,7 +108,7 @@ async function analyzeWithAI(prompt, context) {
     }
   } catch (err) {
     console.error('OpenRouter request error:', err.message);
-    return { analysis: `AI analysis error: ${err.message}`, error: true };
+    throw err;
   }
 }
 
