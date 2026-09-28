@@ -49,7 +49,7 @@ export default function Login({ onLogin }) {
           </button>
         </form>
         <button className="btn-autofill" onClick={autoFill}>
-          Quick Login (Demo Credentials)
+          Auto Fill Demo Credentials
         </button>
       </div>
     </div>
