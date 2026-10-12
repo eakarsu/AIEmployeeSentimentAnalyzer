@@ -1,3 +1,4 @@
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -41,9 +42,10 @@ export default function CrossModuleCorrelationPage() {
           Cross-correlate retention, engagement, pulse, and exit-interview signals for a department to surface composite risk patterns.
         </p>
         <form onSubmit={handleSubmit}>
+<NativeAIControls busy={loading} context="EmployeeSentimentAnalyzer">
           <div className="form-group">
             <label>Department</label>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)} required>
+            <select data-ai-field={"department"} value={department} onChange={(e) => setDepartment(e.target.value)} required>
               <option value="">Select...</option>
               {departments.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -51,7 +53,8 @@ export default function CrossModuleCorrelationPage() {
           <div className="modal-actions">
             <button type="submit" className="btn-save" disabled={loading}>{loading ? 'Analyzing...' : '🤖 Run Correlation'}</button>
           </div>
-        </form>
+        </NativeAIControls>
+</form>
         {error && (
           <div className="ai-analysis-container" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: '20px' }}>
             <div className="ai-analysis-header"><div className="ai-icon" style={{ background: 'linear-gradient(135deg, #dc2626, #ef4444)' }}>⚠</div>Error</div>

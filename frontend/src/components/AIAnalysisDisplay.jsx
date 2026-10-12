@@ -1,101 +1,123 @@
-export default function AIAnalysisDisplay({ data }) {
-  if (!data) return null;
+import React from 'react';
+import JsonReport from './JsonReport';
 
-  if (data.error) {
-    return (
-      <div className="ai-analysis-container" style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}>
-        <div className="ai-analysis-header">
-          <div className="ai-icon" style={{ background: 'linear-gradient(135deg, #dc2626, #ef4444)' }}>⚠</div>
-          AI Analysis Unavailable
-        </div>
-        <div className="ai-section-content">{data.analysis || 'An error occurred during analysis.'}</div>
-      </div>
-    );
+const isPrimitive = (value) => value === null || value === undefined || ['string', 'number', 'boolean'].includes(typeof value);
+
+function labelFor(key) {
+  return String(key)
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function normalize(data) {
+  if (typeof data !== 'string') return data;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return data;
   }
+}
 
-  const renderValue = (key, value) => {
-    if (value === null || value === undefined) return null;
+function primitiveText(value) {
+  if (value === null || value === undefined || value === '') return 'Not provided';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return String(value);
+}
 
-    const label = key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+function statusClass(key, value) {
+  if (!/(risk|level|assessment|urgency|priority|sentiment|status)/i.test(key)) return '';
+  const text = String(value).toLowerCase();
+  if (/(critical|high|negative|blocked|failed|urgent)/.test(text)) return ' badge-negative';
+  if (/(medium|moderate|neutral|pending|review)/.test(text)) return ' badge-neutral';
+  if (/(low|good|positive|excellent|complete|ready|success)/.test(text)) return ' badge-positive';
+  return ' badge-info';
+}
 
-    if (Array.isArray(value)) {
-      return (
-        <div key={key} className="ai-section">
-          <div className="ai-section-title">{label}</div>
-          {value.length > 0 && typeof value[0] === 'object' ? (
-            <ul className="ai-list">
-              {value.map((item, i) => (
-                <li key={i}>{typeof item === 'object' ? JSON.stringify(item) : String(item)}</li>
-              ))}
-            </ul>
-          ) : (
-            <div className="ai-tags">
-              {value.map((item, i) => (
-                <span key={i} className="ai-tag">{String(item)}</span>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
+function PrimitiveValue({ fieldKey, value }) {
+  const badge = statusClass(fieldKey, value);
+  return <span className={badge ? `badge${badge}` : 'ai-value'}>{primitiveText(value)}</span>;
+}
 
-    if (typeof value === 'object') {
-      return (
-        <div key={key} className="ai-section">
-          <div className="ai-section-title">{label}</div>
-          {Object.entries(value).map(([k, v]) => renderValue(k, v))}
-        </div>
-      );
-    }
+function ObjectGrid({ value, path }) {
+  const entries = Object.entries(value);
+  if (!entries.length) return <p className="ai-empty">No details returned.</p>;
+  return (
+    <div className="ai-result-grid">
+      {entries.map(([key, child]) => (
+        <section className="ai-result-card" key={`${path}.${key}`}>
+          <h4>{labelFor(key)}</h4>
+          <NodeValue value={child} fieldKey={key} path={`${path}.${key}`} />
+        </section>
+      ))}
+    </div>
+  );
+}
 
-    if (typeof value === 'number' && (key.includes('score') || key.includes('probability'))) {
-      const pct = value <= 1 ? value * 100 : value;
-      const level = pct >= 70 ? 'high' : pct >= 40 ? 'medium' : 'low';
-      return (
-        <div key={key} className="ai-section">
-          <div className="ai-section-title">{label}</div>
-          <div className="ai-score-display">
-            <div className={`ai-score-circle ${level}`}>{value <= 1 ? (value * 100).toFixed(0) : value.toFixed(1)}%</div>
-            <div className="ai-section-content" style={{ textTransform: 'capitalize' }}>{level} level</div>
-          </div>
-        </div>
-      );
-    }
+function ObjectTable({ rows, path }) {
+  const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  return (
+    <div className="ai-table-wrap">
+      <table className="ai-result-table">
+        <thead><tr>{columns.map((column) => <th key={column}>{labelFor(column)}</th>)}</tr></thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={`${path}.${rowIndex}`}>
+              {columns.map((column) => <td key={column}><PrimitiveValue fieldKey={column} value={row[column]} /></td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-    if (key.includes('risk') || key.includes('level') || key.includes('assessment') || key.includes('urgency')) {
-      const lowerVal = String(value).toLowerCase();
-      let badgeClass = 'badge-info';
-      if (lowerVal.includes('critical') || lowerVal.includes('high')) badgeClass = 'badge-negative';
-      else if (lowerVal.includes('medium') || lowerVal.includes('moderate')) badgeClass = 'badge-neutral';
-      else if (lowerVal.includes('low') || lowerVal.includes('good') || lowerVal.includes('positive') || lowerVal.includes('excellent')) badgeClass = 'badge-positive';
+function ArrayValue({ value, path }) {
+  if (!value.length) return <p className="ai-empty">No items returned.</p>;
+  if (value.every(isPrimitive)) {
+    return <ul className="ai-list">{value.map((item, index) => <li key={`${path}.${index}`}><PrimitiveValue fieldKey="item" value={item} /></li>)}</ul>;
+  }
+  const tabular = value.every((item) => item && !Array.isArray(item) && typeof item === 'object' && Object.values(item).every(isPrimitive));
+  if (tabular) return <ObjectTable rows={value} path={path} />;
+  return (
+    <div className="ai-card-list">
+      {value.map((item, index) => (
+        <section className="ai-result-card" key={`${path}.${index}`}>
+          <h4>Item {index + 1}</h4>
+          <NodeValue value={item} fieldKey={`item_${index + 1}`} path={`${path}.${index}`} />
+        </section>
+      ))}
+    </div>
+  );
+}
 
-      return (
-        <div key={key} className="ai-section">
-          <div className="ai-section-title">{label}</div>
-          <span className={`badge ${badgeClass}`} style={{ fontSize: '14px', padding: '6px 14px' }}>{String(value)}</span>
-        </div>
-      );
-    }
+function NodeValue({ value, fieldKey, path }) {
+  if (Array.isArray(value)) return <ArrayValue value={value} path={path} />;
+  if (value && typeof value === 'object') return <ObjectGrid value={value} path={path} />;
+  return <PrimitiveValue fieldKey={fieldKey} value={value} />;
+}
 
-    return (
-      <div key={key} className="ai-section">
-        <div className="ai-section-title">{label}</div>
-        <div className="ai-section-content">{String(value)}</div>
-      </div>
-    );
-  };
+export default function AIAnalysisDisplay({ data, title = 'AI Analysis Results' }) {
+  if (data === null || data === undefined || data === '') return null;
+  const value = normalize(data);
+  const hasError = value && typeof value === 'object' && !Array.isArray(value) && value.error;
 
   return (
-    <div className="ai-analysis-container">
+    <section className={`ai-analysis-container${hasError ? ' ai-analysis-error' : ''}`} aria-label={title}>
       <div className="ai-analysis-header">
-        <div className="ai-icon">🤖</div>
-        AI Analysis Results
+        <div className="ai-icon">{hasError ? '⚠' : '🤖'}</div>
+        <div>
+          <strong>{hasError ? 'AI Analysis Unavailable' : title}</strong>
+          <span>{hasError ? 'Review the returned error details.' : 'Structured response'}</span>
+        </div>
       </div>
-      {typeof data === 'string' ? (
-        <div className="ai-section-content">{data}</div>
-      ) : (
-        Object.entries(data).map(([key, value]) => renderValue(key, value))
-      )}
-    </div>
+      <NodeValue value={value} fieldKey="result" path="result" />
+      <details style={{ marginTop: 12 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Structured response (JSON)</summary>
+        <div style={{ marginTop: 12 }}>
+          <JsonReport data={value} title={title} />
+        </div>
+      </details>
+    </section>
   );
 }

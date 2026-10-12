@@ -1,3 +1,4 @@
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -49,9 +50,10 @@ export default function ENPSImprovePage() {
         </p>
 
         <form onSubmit={handleSubmit}>
+<NativeAIControls busy={loading} context="EmployeeSentimentAnalyzer">
           <div className="form-group">
             <label>Department (optional)</label>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+            <select data-ai-field={"department"} value={department} onChange={(e) => setDepartment(e.target.value)}>
               <option value="">All departments</option>
               {departments.map((d) => (
                 <option key={d} value={d}>{d}</option>
@@ -61,7 +63,7 @@ export default function ENPSImprovePage() {
 
           <div className="form-group">
             <label>Lookback (days)</label>
-            <input
+            <input data-ai-field={"lookbackDays"}
               type="number"
               min={7}
               max={730}
@@ -80,7 +82,8 @@ export default function ENPSImprovePage() {
               ) : '🤖 Generate Recommendations'}
             </button>
           </div>
-        </form>
+        </NativeAIControls>
+</form>
 
         {error && (
           <div className="ai-analysis-container" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: '20px' }}>

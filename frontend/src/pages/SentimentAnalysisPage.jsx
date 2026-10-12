@@ -1,3 +1,5 @@
+import NativeAIControls from "../components/NativeAIControls";
+import useNativeAIRequest from "../components/useNativeAIRequest";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -5,6 +7,8 @@ import { departments } from '../features';
 import AIAnalysisDisplay from '../components/AIAnalysisDisplay';
 
 export default function SentimentAnalysisPage() {
+  const nativeAIRequest = useNativeAIRequest();
+
   const navigate = useNavigate();
   const [textsBlob, setTextsBlob] = useState('');
   const [department, setDepartment] = useState('');
@@ -33,10 +37,10 @@ export default function SentimentAnalysisPage() {
 
     setLoading(true);
     try {
-      const res = await api.post('/ai/sentiment-analysis', {
+      const res = await nativeAIRequest.run((signal) => api.post('/ai/sentiment-analysis', {
         texts,
         department: department || undefined,
-      });
+      }, { signal }));
       setResult(res.data);
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Analysis failed');
@@ -46,7 +50,7 @@ export default function SentimentAnalysisPage() {
   };
 
   return (
-    <div className="feature-page">
+    <NativeAIControls busy={nativeAIRequest.busy} onCancel={nativeAIRequest.cancel} context="Employee Sentiment Analyzer"><div className="feature-page">
       <div className="feature-page-header">
         <div className="back-section">
           <button className="btn-back" onClick={() => navigate('/')}>
@@ -64,7 +68,7 @@ export default function SentimentAnalysisPage() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Department (optional)</label>
-            <select
+            <select data-ai-field="department"
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
             >
@@ -77,7 +81,7 @@ export default function SentimentAnalysisPage() {
 
           <div className="form-group">
             <label>Comments (one per line)</label>
-            <textarea
+            <textarea data-ai-field="textsBlob"
               rows={10}
               value={textsBlob}
               onChange={(e) => setTextsBlob(e.target.value)}
@@ -131,6 +135,6 @@ export default function SentimentAnalysisPage() {
           </div>
         )}
       </div>
-    </div>
+    </div></NativeAIControls>
   );
 }

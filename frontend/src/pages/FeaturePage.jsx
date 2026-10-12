@@ -215,7 +215,7 @@ function DetailPanel({ item, feature, onClose, onEdit, onDelete, onAnalyze, anal
             </div>
           ))}
 
-          {parsedAI && <AIAnalysisDisplay data={parsedAI} />}
+          {parsedAI && <AIAnalysisDisplay data={parsedAI} title="Saved AI Analysis" />}
         </div>
         <div className="detail-actions">
           <button className="btn-analyze" onClick={onAnalyze} disabled={analyzing}>

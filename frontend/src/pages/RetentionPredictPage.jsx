@@ -1,3 +1,4 @@
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -33,7 +34,7 @@ export default function RetentionPredictPage() {
   };
 
   return (
-    <div className="feature-page">
+    <NativeAIControls busy={loading} context="EmployeeSentimentAnalyzer"><div className="feature-page">
       <div className="feature-page-header">
         <div className="back-section">
           <button className="btn-back" onClick={() => navigate('/')}>
@@ -52,7 +53,7 @@ export default function RetentionPredictPage() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Department</label>
-            <select
+            <select data-ai-field={"department"}
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               required
@@ -108,6 +109,6 @@ export default function RetentionPredictPage() {
           </div>
         )}
       </div>
-    </div>
+    </div></NativeAIControls>
   );
 }

@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import api from '../api';
 
+const demoEmail = import.meta.env.VITE_DEMO_EMAIL || '';
+const demoPassword = import.meta.env.VITE_DEMO_PASSWORD || '';
+const demoCredentialsAvailable = import.meta.env.DEV
+  && import.meta.env.VITE_ENABLE_DEMO_CREDENTIAL_AUTOFILL === 'true'
+  && Boolean(demoEmail && demoPassword);
+
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,9 +27,11 @@ export default function Login({ onLogin }) {
     }
   };
 
-  const autoFill = () => {
-    setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
-    setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
+  const fillDemoCredentials = () => {
+    if (!demoCredentialsAvailable) return;
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setError('');
   };
 
   return (
@@ -37,20 +45,29 @@ export default function Login({ onLogin }) {
         {error && <div className="login-error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required />
+            <label htmlFor="login-email">Email</label>
+            <input id="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required />
           </div>
           <div className="form-group">
-            <label>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required />
+            <label htmlFor="login-password">Password</label>
+            <input id="login-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required />
           </div>
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-        <button className="btn-autofill" onClick={autoFill}>
-          Auto Fill Demo Credentials
+        <button
+          type="button"
+          className="btn-autofill"
+          onClick={fillDemoCredentials}
+          disabled={loading || !demoCredentialsAvailable}
+          title={demoCredentialsAvailable ? 'Fill the configured local demo account' : 'Demo credentials are not configured for this development session'}
+        >
+          Fill Demo Credentials
         </button>
+        {!demoCredentialsAvailable && (
+          <p className="demo-login-note">Demo credentials are available only in configured local development sessions.</p>
+        )}
       </div>
     </div>
   );

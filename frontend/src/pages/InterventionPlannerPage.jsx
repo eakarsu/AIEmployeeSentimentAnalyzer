@@ -1,3 +1,4 @@
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -43,21 +44,23 @@ export default function InterventionPlannerPage() {
           Build an actionable HR intervention plan with timeline, owners, and success metrics for identified issues.
         </p>
         <form onSubmit={handleSubmit}>
+<NativeAIControls busy={loading} context="EmployeeSentimentAnalyzer">
           <div className="form-group">
             <label>Department</label>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)} required>
+            <select data-ai-field={"department"} value={department} onChange={(e) => setDepartment(e.target.value)} required>
               <option value="">Select...</option>
               {departments.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div className="form-group">
             <label>Identified issues (one per line)</label>
-            <textarea rows={6} value={issuesBlob} onChange={(e) => setIssuesBlob(e.target.value)} placeholder={'Low manager 1:1 frequency\nHigh attrition in mid-tenure cohort'} required />
+            <textarea data-ai-field={"issuesBlob"} rows={6} value={issuesBlob} onChange={(e) => setIssuesBlob(e.target.value)} placeholder={'Low manager 1:1 frequency\nHigh attrition in mid-tenure cohort'} required />
           </div>
           <div className="modal-actions">
             <button type="submit" className="btn-save" disabled={loading}>{loading ? 'Planning...' : '🧭 Generate Plan'}</button>
           </div>
-        </form>
+        </NativeAIControls>
+</form>
         {error && (
           <div className="ai-analysis-container" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: '20px' }}>
             <div className="ai-analysis-header"><div className="ai-icon" style={{ background: 'linear-gradient(135deg, #dc2626, #ef4444)' }}>⚠</div>Error</div>

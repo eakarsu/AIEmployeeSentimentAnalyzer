@@ -1,3 +1,4 @@
+import NativeAIControls from "../components/NativeAIControls.jsx";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -42,9 +43,10 @@ export default function SentimentTrendPage() {
           Time-series trend analysis with inflection points, seasonality, and forecast for a chosen metric.
         </p>
         <form onSubmit={handleSubmit}>
+<NativeAIControls busy={loading} context="EmployeeSentimentAnalyzer">
           <div className="form-group">
             <label>Metric type</label>
-            <select value={metricType} onChange={(e) => setMetricType(e.target.value)}>
+            <select data-ai-field={"metricType"} value={metricType} onChange={(e) => setMetricType(e.target.value)}>
               <option value="surveys">Surveys</option>
               <option value="engagement">Engagement</option>
               <option value="pulse">Pulse</option>
@@ -54,16 +56,17 @@ export default function SentimentTrendPage() {
           </div>
           <div className="form-group">
             <label>Start date (optional)</label>
-            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            <input data-ai-field={"start"} type="date" value={start} onChange={(e) => setStart(e.target.value)} />
           </div>
           <div className="form-group">
             <label>End date (optional)</label>
-            <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+            <input data-ai-field={"end"} type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
           </div>
           <div className="modal-actions">
             <button type="submit" className="btn-save" disabled={loading}>{loading ? 'Analyzing...' : '📊 Run Trend'}</button>
           </div>
-        </form>
+        </NativeAIControls>
+</form>
         {error && (
           <div className="ai-analysis-container" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', marginTop: '20px' }}>
             <div className="ai-analysis-header"><div className="ai-icon" style={{ background: 'linear-gradient(135deg, #dc2626, #ef4444)' }}>⚠</div>Error</div>
